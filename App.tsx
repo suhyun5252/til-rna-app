@@ -1,12 +1,12 @@
-import {SafeAreaView, Text, View} from 'react-native';
+import React from 'react';
+import {NavigationContainer} from '@react-navigation/native';
+import ScreenStackNavigator from './src/navigations/ScreenStackNavigator';
 
 const App = (): JSX.Element => {
   return (
-    <SafeAreaView>
-      <View>
-        <Text>안녕하세요.</Text>
-      </View>
-    </SafeAreaView>
+    <NavigationContainer>
+      <ScreenStackNavigator />
+    </NavigationContainer>
   );
 };
 
