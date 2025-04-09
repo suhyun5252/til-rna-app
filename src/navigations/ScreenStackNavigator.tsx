@@ -3,7 +3,8 @@ import React from 'react';
 import HomeScreen from '../screens/HomeScreen';
 import AboutScreen from '../screens/AboutScreen';
 import WebViewScreen from '../screens/WebViewScreen';
-
+import ProfileScreen from '../screens/ProfileScreen';
+import CheckList from '../screens/CheckList';
 const ScreenStackNavigator = (): JSX.Element => {
   // screen 스택에 대한 정보관리
   // 관례상 변수명을 Stack 으로 한다 (참조)
@@ -13,6 +14,8 @@ const ScreenStackNavigator = (): JSX.Element => {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="WebView" component={WebViewScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="CheckList" component={CheckList} />
     </Stack.Navigator>
   );
 };

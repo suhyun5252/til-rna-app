@@ -14,6 +14,14 @@ const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
           title={'WebView 로 이동'}
           onPress={() => navigation.navigate('WebView')}
         />
+        <Button
+          title={'Profile 로 이동'}
+          onPress={() => navigation.navigate('Profile')}
+        />
+        <Button
+          title={'CheckList 로 이동'}
+          onPress={() => navigation.navigate('CheckList')}
+        />
       </View>
     </SafeAreaView>
   );
