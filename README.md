@@ -1,67 +1,325 @@
-# 컴포넌트 응용 화면 구성
+# # Supabase
 
-- `/src/screens/ProfileScreen.tsx 파일` 생성
+- 우리가 Next의 서버액션을 쓰다보니, ssr을 기준으로 작업
+- React Native는 클라이언트 용
+- supabase 기존 테이블 사용(`todos`)
 
-```tsx
-import React from 'react';
-import {Text} from 'react-native';
-import {SafeAreaView, View} from 'react-native';
+## 타입스크립트를 위한 `타입 참조`
 
-function ProfileScreen(): JSX.Element {
-  return (
-    <SafeAreaView>
-      <View>
-        <Text>ProfileScreen</Text>
-      </View>
-    </SafeAreaView>
-  );
+- 이전 프로젝트에서 `package.json` 에 내용으로 `생성한 파일을 복사`해서 사용
+- react-native supabase 사용시 next.js 에서 만들어서 복사해서 사용하자.
+
+```json
+"generate-types": "npx supabase gen types typescript --project-id 프로젝트아이디 --schema public >  src/types/types_db.ts"
+```
+
+```bash
+npm run generate-types
+```
+
+- 생성되어진 `src/types/types_db.ts` 파일을 이용해서 진행할 예정
+
+## Supabase 타입정의 파일
+
+- `/src/types/types/types_db.ts` 생성
+
+## npm 설치 (버전주의)
+
+```bash
+npm install @supabase/supabase-js@2.39.5
+```
+
+```bash
+npm install react-native-url-polyfill
+```
+
+## .env 에 대해서
+
+### 1. 기존 프로젝트에서는 이미 env 가 셋팅되어 있음.
+
+- `Next` : npx create-next-app@latest 프로젝트 생성
+
+```env
+NEXT_PUBLIC_SUPABASE_URL = 문자열;
+```
+
+```ts
+process.env.NEXT_PUBLIC_SUPABASE_URL;
+```
+
+- `React Vite` : npm create vite@latest 프로젝트 생성
+
+```env
+VITE_SUPABASE_URL=문자열
+```
+
+```ts
+import.meta.env.VITE_SUPABASE_URL;
+```
+
+- `React CRA` : npx create-react-app 프로젝트 생성
+
+```env
+REACT_APP_SUPABASE_URL=문자열
+```
+
+```ts
+process.env.REACT_APP_SUPABASE_URL;
+```
+
+### 2. React Native 는 개발자가 직접 셋팅하여아 함.
+
+- babel.config.js 수정 및 추가 필요
+- npm 도 추가 설정
+- 사용법도 별도 진행
+
+### 3. env 셋팅 방법
+
+```bash
+npm install react-native-config
+```
+
+- /android/app/build.gradle
+- `app 경로 꼭 확인`
+- 아래 문장을 추가한다.
+
+```txt
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+```
+
+- / 에 .env 파일을 생성
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-public-key
+```
+
+- `/src/types/react-native-config.d.ts` 파일 생성
+
+```ts
+// types/react-native-config.d.ts
+declare module 'react-native-config' {
+  interface Env {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }
+
+  const Config: Env;
+  export default Config;
 }
-
-export default ProfileScreen;
 ```
 
-- `/src/navigations/ScreenStackNavigator.tsx 파일` 수정
-- `  <Stack.Screen name="Profile" component={ProfileScreen} />` 추가
+## Supabase 를 위한 폴더 및 파일 생성
 
-```tsx
-import {createStackNavigator} from '@react-navigation/stack';
-import React from 'react';
-import HomeScreen from '../screens/HomeScreen';
-import AboutScreen from '../screens/AboutScreen';
-import WebViewScreen from '../screens/WebViewScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-const ScreenStackNavigator = (): JSX.Element => {
-  // screen 스택에 대한 정보관리
-  // 관례상 변수명을 Stack 으로 한다 (참조)
-  const Stack = createStackNavigator();
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen name="WebView" component={WebViewScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-    </Stack.Navigator>
-  );
+- `/src/lib/supabase 폴더` 생성
+- `/src/lib/supabase/client.ts 파일` 생성
+
+```ts
+import 'react-native-url-polyfill/auto'; // 무조건 첫줄
+
+import Config from 'react-native-config';
+import {createClient} from '@supabase/supabase-js';
+import {Database} from '../../types/types_db';
+
+export const supabase = createClient<Database>(
+  Config.SUPABASE_URL,
+  Config.SUPABASE_ANON_KEY,
+);
+```
+
+- `/src/types/react-native-config.d.ts` 파일 생성
+
+```ts
+// types/react-native-config.d.ts
+declare module 'react-native-config' {
+  interface Env {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }
+
+  const Config: Env;
+  export default Config;
+}
+```
+
+## Supabase CRUD API 파일 만들기
+
+- `/src/api/todos-api.ts 파일` 생성
+
+```ts
+import {supabase} from '../lib/supabase/client';
+import {Database} from '../types/types_db';
+import 'react-native-get-random-values';
+import {v4 as uuidv4} from 'uuid';
+
+export type TodosRow = Database['public']['Tables']['todos']['Row'];
+export type TodosRowInsert = Database['public']['Tables']['todos']['Insert'];
+export type TodosRowUpdate = Database['public']['Tables']['todos']['Update'];
+
+// Read
+export const getTodos = async () => {
+  let {data, error, status} = await supabase
+    .from('todos')
+    .select('*')
+    .order('id', {ascending: false});
+
+  if (error) {
+    console.log(error.message);
+    return;
+  }
+  return {data, error, status} as {
+    data: TodosRow[] | null;
+    error: Error | null;
+    status: number;
+  };
 };
+// Create
+export const createTodo = async (title: string) => {
+  const {data, error, status} = await supabase
+    .from('todos')
+    .insert([
+      {
+        title: title,
+        contents: JSON.stringify([]),
+        start_date: new Date().toISOString(),
+        end_date: new Date().toISOString(),
+        user_id: uuidv4(), // 로그인 사용자 정보
+        user_email: '', // 로그인 사용자 정보
+      },
+    ])
+    .select()
+    .single();
 
-export default ScreenStackNavigator;
+  if (error) {
+    console.log(error.message);
+    return;
+  }
+
+  return {data, error, status};
+};
+// Update
+export const updateTodo = async (id: number, title: string) => {
+  const {data, error, status} = await supabase
+    .from('todos')
+    .update({
+      title: title,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  return {data, error, status} as {
+    data: TodosRow | null;
+    error: Error | null;
+    status: number;
+  };
+};
+// Delete
+export const deleteTodo = async (id: number) => {
+  const {data, error} = await supabase.from('todos').delete().eq('id', id);
+  if (error) {
+    console.log(error.message);
+    return {error};
+  }
+  return {data};
+};
 ```
 
-- `/src/screens/HomeScreen.tsx 파일` 수정
-- 아래 코드 추가
+## Supabase 테이틀 출력하기 (Read)
+
+- /src/screens/HomeScreen.tsx 적용
 
 ```tsx
-<Button
-  title={'Profile 로 이동'}
-  onPress={() => navigation.navigate('Profile')}
-/>
-```
-
-```tsx
-import React from 'react';
-import {Button, SafeAreaView, StyleSheet, Text, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  Alert,
+  Button,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {
+  createTodo,
+  deleteTodo,
+  getTodos,
+  TodosRow,
+  updateTodo,
+} from '../api/todos-api';
+import {TextInput} from 'react-native-gesture-handler';
 
 const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
+  // 전체 목록 state
+  const [todos, setTodos] = useState<TodosRow[]>([]);
+  // 수정 관련 state
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+
+  // 새글 관련 state
+  const [newTitle, setNewTitle] = useState('');
+
+  // 전체 목록 가져오기
+  const fetchGetTodos = async () => {
+    const result = await getTodos();
+    if (!result) {
+      console.log('데이터 호출 실패');
+      return;
+    }
+    const {data, error, status} = result;
+    if (error) {
+      console.log('Error : ', error.message);
+      return;
+    }
+    if (data) {
+      console.log(status);
+      setTodos(data);
+    }
+  };
+
+  // 목록 삭제하기
+  const handleDelete = async (id: number) => {
+    const {data} = await deleteTodo(id);
+    console.log(data);
+    // 전체 목록 다시 받기
+    fetchGetTodos();
+  };
+
+  // 제목 업데이트
+  const handleEdit = async (id: number) => {
+    if (editTitle.trim() === '') {
+      Alert.alert('제목을 입력하세요.');
+      return;
+    }
+
+    const {data, error, status} = await updateTodo(id, editTitle);
+    console.log(data);
+    setEditId(null);
+    setEditTitle('');
+    Alert.alert('제목이 수정되었습니다');
+    fetchGetTodos();
+  };
+  // 새글 추가
+  const handleAdd = async () => {
+    if (newTitle.trim() === '') {
+      Alert.alert('제목을 입력하세요.');
+      return;
+    }
+    const result = await createTodo(newTitle);
+
+    if (!result) {
+      Alert.alert('입력에 실패했습니다.');
+      return;
+    }
+    const {data, error, status} = result;
+    console.log(data);
+    setNewTitle('');
+    fetchGetTodos();
+  };
+
+  useEffect(() => {
+    fetchGetTodos();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View>
@@ -79,296 +337,111 @@ const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
           onPress={() => navigation.navigate('Profile')}
         />
       </View>
+      {/* 추가 */}
+      <View style={[styles.inputArea, {marginTop: 20}]}>
+        <TextInput
+          style={styles.input}
+          value={newTitle}
+          onChangeText={setNewTitle}
+        />
+        <Button title="추가" color={'#0b72e0'} onPress={() => handleAdd()} />
+      </View>
+      {/* 목록 */}
+      <ScrollView style={styles.todoList}>
+        {todos.map(item => (
+          <View key={item.id} style={styles.todoCard}>
+            {editId === item.id ? (
+              <>
+                <TextInput
+                  style={styles.input}
+                  value={editTitle}
+                  onChangeText={setEditTitle}
+                />
+                <View style={styles.todoButtons}>
+                  <Button
+                    title="저장"
+                    color={'#0b72e0'}
+                    onPress={() => handleEdit(item.id)}
+                  />
+                  <Button
+                    title="취소"
+                    color={'#cb05ee'}
+                    onPress={() => {
+                      setEditId(null);
+                      setEditTitle('');
+                    }}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.todoTitle}>
+                  {item.title ? item.title : 'NoTitle'}
+                </Text>
+                <View style={styles.todoButtons}>
+                  <Button
+                    title="수정"
+                    color={'#4caf50'}
+                    onPress={() => {
+                      setEditId(item.id);
+                      setEditTitle(item.title || '');
+                    }}
+                  />
+                  <Button
+                    title="삭제"
+                    color={'#f44336'}
+                    onPress={() => handleDelete(item.id)}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-//css
+// css
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'pink',
-  },
-});
-export default HomeScreen;
-```
-
-- 실행 `npm start` -> `a`
-
-# 컴포넌트 기본 구성
-
-## 1. 기본 화면 구성은 SafeAreaView 컴포넌트로 구성
-
-```tsx
-import React from 'react';
-import {StyleSheet, Text} from 'react-native';
-import {SafeAreaView, View} from 'react-native';
-
-function ProfileScreen(): JSX.Element {
-  return (
-    <SafeAreaView style={styles.container}>
-      <View>
-        <Text>ProfileScreen</Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
     backgroundColor: '#fff',
   },
-});
-export default ProfileScreen;
-```
-
-## 2. 프로필 스크린 만들어보기
-
-```tsx
-import React, {useState} from 'react';
-import {Alert} from 'react-native';
-import {
-  Button,
-  Image,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-
-function ProfileScreen() {
-  const [name, setName] = useState('');
-  const [introduce, setIntroduce] = useState('');
-  const [submitted, setSubmmited] = useState(false);
-
-  const handlePress = () => {
-    if (name.trim() === '' || introduce.trim() === '') {
-      Alert.alert('입력 오류', '이름과 소개를 입력해주세요.', [{text: '확인'}]);
-      return;
-    }
-    setSubmmited(true);
-    Alert.alert('환영합니다.', `${name}님 환영합니다.`, [{text: '확인'}]);
-  };
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={[styles.container, {width: '100%'}]}>
-        {/* 로컬 이미지는 require 사용 */}
-        <Image
-          source={{uri: 'https://picsum.photos/200/300?random=1'}}
-          style={styles.image}
-        />
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="이름을 입력하세요."
-        />
-        <TextInput
-          style={styles.input}
-          value={introduce}
-          onChangeText={setIntroduce}
-          multiline
-          placeholder="자기소개를 입력하세요."
-        />
-        <Button title="나의 프로필" onPress={handlePress} />
-        {submitted && (
-          <View>
-            <Text>{name}</Text>
-            <Text>{introduce}</Text>
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  // 전체 너비 차지
-  container: {
+  todoList: {
     flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#fff',
   },
-  image: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#ccc',
+  todoCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  todoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  todoButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 10,
   },
   input: {
-    width: '90%',
+    flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 15,
-    backgroundColor: '#fff',
-  },
-  resultBox: {
-    marginTop: 30,
-    alignItems: 'center',
-  },
-  resultText: {
-    fontSize: 16,
-    marginTop: 5,
-    color: '#333',
-  },
-});
-
-export default ProfileScreen;
-```
-
-## 3. 오늘 할일 체크 리스트 만들기
-
-- `/src/navigations/ScreenStackNavigator.tsx 파일` 수정
-- ` <Stack.Screen name="CheckList" component={CheckList} />` 추가
-- `/src/screens/HomeScreen.tsx 파일` 수정
-- 아래 코드 추가
-
-```tsx
-<Button
-  title={'CheckList 로 이동'}
-  onPress={() => navigation.navigate('CheckList')}
-/>
-```
-
-```tsx
-import React, {useState} from 'react';
-import {
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-
-type Task = {
-  id: string;
-  title: string;
-  done: boolean;
-};
-
-export default function ProfileScreen() {
-  // 할일 데이터 state
-  const [tasks, setTasks] = useState<Task[]>([
-    {id: '1', title: '아침 먹기', done: true},
-    {id: '2', title: '점심 먹기', done: false},
-    {id: '3', title: '저녁 먹기', done: false},
-  ]);
-
-  // 할일 목록중  state의 done 변경
-  const toggleSwitch = (id: string) => {
-    setTasks(prev =>
-      prev.map(item => (item.id === id ? {...item, done: !item.done} : item)),
-    );
-  };
-
-  const renderItem = ({item}: {item: Task}) => (
-    <View style={styles.itemRow}>
-      <Text style={[styles.itemText, item.done && styles.checkedText]}>
-        {item.done ? '✔' : '✘'} {item.title}
-      </Text>
-      <Switch
-        value={item.done}
-        onValueChange={() => toggleSwitch(item.id)}
-        thumbColor={item.done ? 'orange' : '#fff'}
-        trackColor={{
-          true: '#eee',
-          false: '#eee',
-        }}
-      />
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.viewContainer}>
-        <Text style={styles.title}>할일체크리스트</Text>
-        {/* 목록 출력 */}
-        <FlatList
-          data={tasks}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-        />
-        <TouchableOpacity style={[styles.button]}>
-          <Text
-            style={styles.buttonText}
-            onPress={() => {
-              Alert.alert('오늘도 화이팅!!');
-            }}
-            onPressIn={() => {
-              console.log('onPressIn');
-            }}
-            onPressOut={() => {
-              console.log('onPressOut');
-            }}>
-            메시지 보내기
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
-  );
-}
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    width: '100%',
-  },
-  viewContainer: {
-    flex: 1,
-    width: '100%',
-    padding: 50,
-    backgroundColor: '#f2f2f2',
-  },
-  title: {
-    fontSize: 22,
-    marginBottom: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    borderColor: '#ddd',
     borderRadius: 8,
+    padding: 8,
+    marginRight: 8,
   },
-  itemText: {
-    fontSize: 18,
-  },
-  checkedText: {
-    textDecorationLine: 'line-through',
-    color: 'gray',
-  },
-  separator: {
-    height: 10,
-    backgroundColor: '#f2f2f2',
-  },
-  button: {
-    marginTop: 30,
-    backgroundColor: '#ff7300',
-    paddingVertical: 15,
-    borderRadius: 10,
+  inputArea: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    marginBottom: 16,
   },
 });
-```
 
-## 4. 오늘 할일 추가하기 (입력창, 리스트 등)
+export default HomeScreen;
+```
