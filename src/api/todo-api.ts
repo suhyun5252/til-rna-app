@@ -1,19 +1,21 @@
 import {supabase} from '../lib/supabase/client';
 import {Database} from '../types/types_db';
+import 'react-native-get-random-values';
 import {v4 as uuidv4} from 'uuid';
 
 export type TodosRow = Database['public']['Tables']['todos']['Row'];
 export type TodosRowInsert = Database['public']['Tables']['todos']['Insert'];
 export type TodosRowUpdate = Database['public']['Tables']['todos']['Update'];
 
-// READ
+// Read
 export const getTodos = async () => {
   let {data, error, status} = await supabase
     .from('todos')
     .select('*')
     .order('id', {ascending: false});
+
   if (error) {
-    console.error(error.message);
+    console.log(error.message);
     return;
   }
   return {data, error, status} as {
@@ -39,6 +41,11 @@ export const createTodo = async (title: string) => {
     .select()
     .single();
 
+  if (error) {
+    console.log(error.message);
+    return;
+  }
+
   return {data, error, status};
 };
 // Update
@@ -51,7 +58,6 @@ export const updateTodo = async (id: number, title: string) => {
     .eq('id', id)
     .select()
     .single();
-
   return {data, error, status} as {
     data: TodosRow | null;
     error: Error | null;
