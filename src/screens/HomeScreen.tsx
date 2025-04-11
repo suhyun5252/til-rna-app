@@ -22,6 +22,26 @@ const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
           title={'CheckList 로 이동'}
           onPress={() => navigation.navigate('CheckList')}
         />
+        <Button
+          title={'TodoList 로 이동'}
+          onPress={() => navigation.navigate('TodoList')}
+        />
+        <Button
+          title={'Popup 로 이동'}
+          onPress={() => navigation.navigate('Popup')}
+        />
+        <Button
+          title={'FlatList 로 이동'}
+          onPress={() => navigation.navigate('FlatList')}
+        />
+        <Button
+          title={'AsyncStorage 로 이동'}
+          onPress={() => navigation.navigate('AsyncStorage')}
+        />
+        <Button
+          title={'Test 로 이동'}
+          onPress={() => navigation.navigate('Test')}
+        />
       </View>
     </SafeAreaView>
   );
