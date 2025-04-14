@@ -7,10 +7,14 @@ const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
       <View>
         <Text>Home Screen</Text>
         <Button
+          title={'상세회면으로 이동하기'}
+          onPress={() => navigation.navigate('Details')}
+        />
+        {/*<Button
           title={'About 로 이동'}
           onPress={() => navigation.navigate('About')}
         />
-        <Button
+         <Button
           title={'WebView 로 이동'}
           onPress={() => navigation.navigate('WebView')}
         />
@@ -41,7 +45,7 @@ const HomeScreen = ({navigation}: {navigation: any}): JSX.Element => {
         <Button
           title={'Test 로 이동'}
           onPress={() => navigation.navigate('Test')}
-        />
+        /> */}
       </View>
     </SafeAreaView>
   );

@@ -23,7 +23,7 @@ export default function ProfileScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState('');
 
-  // 📌 화면 렌더용 항목
+  //  화면 렌더용 항목
   const renderItem = ({item}: {item: Task}) => (
     <View style={styles.taskItem}>
       <Text style={styles.taskText}> {item.title}</Text>
@@ -35,7 +35,7 @@ export default function ProfileScreen() {
     </View>
   );
 
-  // ✅ 할 일 추가
+  //  할 일 추가
   const handleAdd = () => {
     if (input.trim() === '') {
       Alert.alert('입력 오류', '할 일을 입력해주세요!');
@@ -51,7 +51,7 @@ export default function ProfileScreen() {
     setInput('');
   };
 
-  // ✅ 할 일 삭제
+  // 할 일 삭제
   const handleDelete = (id: string) => {
     Alert.alert('삭제 확인', '정말 삭제할까요?', [
       {text: '취소', style: 'cancel'},
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  // ✅ 데이터 불러오기
+  //  데이터 불러오기
   const loadTask = async () => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
@@ -89,7 +89,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // ✅ 데이터 저장하기
+  //  데이터 저장하기
   useEffect(() => {
     const saveTask = async () => {
       try {
@@ -103,7 +103,7 @@ export default function ProfileScreen() {
     }
   }, [tasks]);
 
-  // ✅ 마운트 시 데이터 불러오기
+  //  마운트 시 데이터 불러오기
   useEffect(() => {
     loadTask();
   }, []);
